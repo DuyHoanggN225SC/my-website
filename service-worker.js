@@ -1,40 +1,29 @@
-const CACHE_NAME = 'my-cache-v3';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/logo.png',
-  '/offline.html'
+const cacheName = 'my-precache-v1';
+const PRECACHE_URLS = [
+  'index.html',
+  'background.jpg',
+  'script.js',
+  'style.css',
 ];
 
-self.addEventListener('install', event => {
-  console.log('[SW] Installing...');
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(cacheName)
+    .then(cache => cache.addAll(PRECACHE_URLS))
+    .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating...');
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(key => {
-        if (key !== CACHE_NAME) return caches.delete(key);
-      }))
-    )
-  );
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    fetch(event.request)
+    caches.open(cacheName)
+      .then(cache => cache.match(event.request, {ignoreSearch: true}))
       .then(response => {
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request)
-          .then(res => res || caches.match('/offline.html'));
-      })
+      return response || fetch(event.request);
+    })
   );
 });
